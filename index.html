@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Scroll animation test</title>
+    <!-- lootie -->
+    <script src="https://cdn.jsdelivr.net/npm/babylonjs@6.0.0/babylon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@6.0.0/babylonjs.loaders.min.js"></script>
+    <style>
+        #renderCanvas {
+            top: 0;
+            height: 100vh;
+            width: 100vw;
+            touch-action: none;
+            outline: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="renderCanvas"></canvas>
+
+
+    <script>
+
+        let canvas = document.getElementById("renderCanvas")
+
+        var startRenderLoop = function (engine, canvas) {
+            engine.runRenderLoop(function () {
+                if (sceneToRender && sceneToRender.activeCamera) {
+                    sceneToRender.render();
+                }
+                //mobile to look nice
+                // engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
+                // engine.adaptToDeviceRatio = true;
+            });
+        }
+
+        var engine = null;
+        var scene = null;
+        var sceneToRender = null;
+        var createDefaultEngine = function () { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, disableWebGL2Support: false }); };
+
+
+        //CREATE SCENE
+        var createScene = async function () {
+
+            var scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+
+            //CAMERA 1
+            var camera = new BABYLON.ArcRotateCamera(
+                "Camera",
+                0,
+                0,
+                0,
+                new BABYLON.Vector3(0, 0, 0),
+                scene
+            );
+            camera.minZ = 0.1;
+            camera.setPosition(new BABYLON.Vector3(0, 0, 11));
+            camera.attachControl(canvas, true);
+
+
+            //ENVIORMENT
+            // scene.environmentTexture = new BABYLON.CubeTexture(
+            //     "chinese_garden_4k.hdr",
+            //     scene
+            // );
+            scene.environmentTexture = new BABYLON.HDRCubeTexture("cloud_layers_2k.hdr", scene, 128, false, true, false, true);
+            scene.environmentIntensity = 1;
+
+            //LOADING OF GLB
+            BABYLON.SceneLoader.ImportMeshAsync("", "", "https://raw.githubusercontent.com/veljko85/glbModels/gh-pages/kontejner/kontejner6.glb").then(
+                (result) => {
+                    //ROOT MESHES
+                    var root = result.meshes[0]
+
+                    //FIRST CONTAINER
+                    root.position = new BABYLON.Vector3(0, 0, 0)
+                    // root.rotationQuaternion = null;
+                    // root.rotation.y = 3.68
+
+                    scene.getMaterialByID("Bruseni metal").ambientTexture =
+                        new BABYLON.Texture(
+                            "https://raw.githubusercontent.com/veljko85/glbModels/gh-pages/kontejner/ao.jpg",
+                            scene
+                        );
+                    scene.getMaterialByID("Bruseni metal").ambientTexture.uScale = 1; //and/or the following for vScale:
+                    scene.getMaterialByID("Bruseni metal").ambientTexture.vScale = -1; //(-1.0 or some other value)
+
+                    var glow = new BABYLON.GlowLayer("glow", scene);
+                    glow.intensity = 2;
+
+
+                }
+            );
+
+            //IMPORT GLB END
+            scene.executeWhenReady(() => {
+                //hide loading spiner
+                //   engine.hideLoadingUI();
+
+                //scene render
+                engine.runRenderLoop(() => {
+                    scene.render();
+                });
+
+
+            });
+
+
+
+            return scene;
+        };
+
+        window.initFunction = async function () {
+            var asyncEngineCreation = async function () {
+                try {
+                    return createDefaultEngine();
+                } catch (e) {
+                    console.log("the available createEngine function failed. Creating the default engine instead");
+                    return createDefaultEngine();
+                }
+            }
+            window.engine = await asyncEngineCreation();
+            if (!engine) throw 'engine should not be null.';
+            startRenderLoop(engine, canvas);
+            window.scene = createScene();
+        };
+        initFunction().then(() => {
+            sceneToRender = scene
+        });
+        // Resize
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });
+    </script>
+</body>
+
+</html>
