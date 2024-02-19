@@ -1,144 +1,178 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Scroll animation test</title>
-    <!-- lootie -->
-    <script src="https://cdn.jsdelivr.net/npm/babylonjs@6.0.0/babylon.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@6.0.0/babylonjs.loaders.min.js"></script>
-    <style>
-        #renderCanvas {
-            top: 0;
-            height: 100vh;
-            width: 100vw;
-            touch-action: none;
-            outline: none !important;
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite App</title>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+          }
         }
-    </style>
+      </script>
 </head>
 
 <body>
 
-    <canvas id="renderCanvas"></canvas>
+    <canvas id="canvas" style="width: 100vw; height: 100vh;"></canvas>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <!-- <script type="module" src="/main.js"></script> -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+        import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        console.log('aaa')
+        const canvas = document.querySelector("canvas");
+
+        const scene = new THREE.Scene();
 
 
-    <script>
+        const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
 
-        let canvas = document.getElementById("renderCanvas")
+        // const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        // scene.background = new THREE.Color(0xf0f0f0);
+        // scene.environment = pmremGenerator.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 
-        var startRenderLoop = function (engine, canvas) {
-            engine.runRenderLoop(function () {
-                if (sceneToRender && sceneToRender.activeCamera) {
-                    sceneToRender.render();
+        // const environment = new RoomEnvironment(renderer);
+        // const pmremGenerator = new THREE.PMREMGenerator(renderer);
+
+        // // scene.background = new THREE.Color(0xbbbbbb);
+        // scene.environment = pmremGenerator.fromScene(environment).texture;
+
+        // renderer.setSize(window.innerWidth, window.innerHeight);
+        // document.body.appendChild(renderer.domElement);
+
+        //HDR ENVIORMENT
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+
+        const hdriLoader = new RGBELoader()
+        hdriLoader.load('cloud_layers_2k.hdr', function (texture) {
+            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+            texture.dispose();
+            scene.environment = envMap
+        });
+        ////////////////////////////
+
+        renderer.setClearColor(0xffffff);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const controls = new OrbitControls(camera, canvas);
+        // controls.target.set(0, 5, 0);
+        controls.update();
+
+        camera.position.z = 5;
+
+        // const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3);
+        // hemiLight.position.set(0, 20, 0);
+        // scene.add(hemiLight);
+
+        // const dirLight = new THREE.DirectionalLight(0xff0000, 1);
+        // dirLight.position.set(- 3, 3, 0);
+        // dirLight.castShadow = true;
+        // // dirLight.shadow.camera.top = 2;
+        // // dirLight.shadow.camera.bottom = - 2;
+        // // dirLight.shadow.camera.left = - 2;
+        // // dirLight.shadow.camera.right = 2;
+        // // dirLight.shadow.camera.near = 0.1;
+        // // dirLight.shadow.camera.far = 40;
+        // scene.add(dirLight);
+
+        // const light = new THREE.AmbientLight(0x404040, 30); // soft white light
+        // scene.add(light);
+
+        // const geometry = new THREE.BoxGeometry(1, 1, 1);
+        // const material = new THREE.MeshBasicMaterial({ color: "#ff0000" });
+        // const cube = new THREE.Mesh(geometry, material);
+        // scene.add(cube);
+
+        // const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshPhongMaterial({ color: 0xcbcbcb, depthWrite: false }));
+        // ground.rotation.x = - Math.PI / 2;
+        // ground.receiveShadow = true;
+        // ground.position.y = -2
+        // scene.add(ground);
+
+        var bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight), 3, 0.5, 0.4
+        );
+        bloomPass.threshold = 0;
+        bloomPass.strength = 1;
+        bloomPass.radius = 0.5;
+
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
+        dracoLoader.setDecoderConfig({ type: "js" });
+
+        // Optional: Pre-fetch Draco WASM/JS module.
+
+        const gltfLoader = new GLTFLoader();
+        gltfLoader.setDRACOLoader(dracoLoader);
+
+        let modelURL = "https://raw.githubusercontent.com/veljko85/glbModels/gh-pages/kontejner/kontejner6.glb"
+
+        gltfLoader.load(modelURL, function (result) {
+            let root = result.scene;
+            scene.add(root);
+            root.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    // child.material.envMapIntensity = 0.55;
+                    child.material.emissiveIntensity = 2;
                 }
-                //mobile to look nice
-                // engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
-                // engine.adaptToDeviceRatio = true;
             });
+
+        }, undefined, function (error) {
+            console.error(error);
+        });
+
+
+
+        // function animate() {
+        //   requestAnimationFrame(animate);
+
+        // cube.rotation.x += 0.01;
+        // cube.rotation.y += 0.01;
+
+        // renderer.render(scene, camera);
+        // }
+        // animate();
+
+        function resizeRendererToDisplaySize(renderer) {
+            const canvas = renderer.domElement;
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            const needResize = canvas.width !== width || canvas.height !== height;
+            if (needResize) {
+                renderer.setSize(width, height, false);
+            }
+            return needResize;
         }
 
-        var engine = null;
-        var scene = null;
-        var sceneToRender = null;
-        var createDefaultEngine = function () { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, disableWebGL2Support: false }); };
-
-
-        //CREATE SCENE
-        var createScene = async function () {
-
-            var scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
-
-            //CAMERA 1
-            var camera = new BABYLON.ArcRotateCamera(
-                "Camera",
-                0,
-                0,
-                0,
-                new BABYLON.Vector3(0, 0, 0),
-                scene
-            );
-            camera.minZ = 0.1;
-            camera.setPosition(new BABYLON.Vector3(0, 0, 11));
-            camera.attachControl(canvas, true);
-
-
-            //ENVIORMENT
-            // scene.environmentTexture = new BABYLON.CubeTexture(
-            //     "chinese_garden_4k.hdr",
-            //     scene
-            // );
-            scene.environmentTexture = new BABYLON.HDRCubeTexture("cloud_layers_2k.hdr", scene, 128, false, true, false, true);
-            scene.environmentIntensity = 1;
-
-            //LOADING OF GLB
-            BABYLON.SceneLoader.ImportMeshAsync("", "", "https://raw.githubusercontent.com/veljko85/glbModels/gh-pages/kontejner/kontejner6.glb").then(
-                (result) => {
-                    //ROOT MESHES
-                    var root = result.meshes[0]
-
-                    //FIRST CONTAINER
-                    root.position = new BABYLON.Vector3(0, 0, 0)
-                    // root.rotationQuaternion = null;
-                    // root.rotation.y = 3.68
-
-                    scene.getMaterialByID("Bruseni metal").ambientTexture =
-                        new BABYLON.Texture(
-                            "https://raw.githubusercontent.com/veljko85/glbModels/gh-pages/kontejner/ao.jpg",
-                            scene
-                        );
-                    scene.getMaterialByID("Bruseni metal").ambientTexture.uScale = 1; //and/or the following for vScale:
-                    scene.getMaterialByID("Bruseni metal").ambientTexture.vScale = -1; //(-1.0 or some other value)
-
-                    var glow = new BABYLON.GlowLayer("glow", scene);
-                    glow.intensity = 2;
-
-
-                }
-            );
-
-            //IMPORT GLB END
-            scene.executeWhenReady(() => {
-                //hide loading spiner
-                //   engine.hideLoadingUI();
-
-                //scene render
-                engine.runRenderLoop(() => {
-                    scene.render();
-                });
-
-
-            });
-
-
-
-            return scene;
-        };
-
-        window.initFunction = async function () {
-            var asyncEngineCreation = async function () {
-                try {
-                    return createDefaultEngine();
-                } catch (e) {
-                    console.log("the available createEngine function failed. Creating the default engine instead");
-                    return createDefaultEngine();
-                }
+        function render() {
+            if (resizeRendererToDisplaySize(renderer)) {
+                const canvas = renderer.domElement;
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
             }
-            window.engine = await asyncEngineCreation();
-            if (!engine) throw 'engine should not be null.';
-            startRenderLoop(engine, canvas);
-            window.scene = createScene();
-        };
-        initFunction().then(() => {
-            sceneToRender = scene
-        });
-        // Resize
-        window.addEventListener("resize", function () {
-            engine.resize();
-        });
+
+            renderer.render(scene, camera);
+
+            requestAnimationFrame(render);
+        }
+
+        requestAnimationFrame(render);
     </script>
 </body>
 
